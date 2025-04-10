@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Elderly Care Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-light">
+
+<div class="container py-4">
+  <h2 class="mb-4 text-center">👵 Elderly Care AI Dashboard</h2>
+
+  <!-- Search Filter -->
+  <form method="get" class="mb-4">
+    <div class="input-group">
+      <input type="text" name="user_id" class="form-control" placeholder="Search by User ID..." value="{{ request.args.get('user_id', '') }}">
+      <button class="btn btn-primary" type="submit">Search</button>
+    </div>
+  </form>
+
+  <!-- Reminders -->
+  <div class="card mb-4">
+    <div class="card-header bg-info text-white">⏰ Daily Reminders</div>
+    <ul class="list-group list-group-flush">
+      {% for r in reminders %}
+        <li class="list-group-item">{{ r }}</li>
+      {% else %}
+        <li class="list-group-item text-muted">No reminders available.</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+<!-- Health Alerts -->
+<div class="card mb-4">
+    <div class="card-header bg-danger text-white">🩺 Health Alerts</div>
+    <ul class="list-group list-group-flush">
+      {% set has_alerts = health_alerts.values() | map('length') | sum > 0 %}
+      {% if has_alerts %}
+        {% for category, alerts in health_alerts.items() %}
+          {% for alert in alerts %}
+            <li class="list-group-item">
+              <strong>{{ category }}</strong><br>
+              {{ alert.user }} — {{ alert.issue }}<br>
+              <small>{{ alert.timestamp }}</small>
+            </li>
+          {% endfor %}
+        {% endfor %}
+      {% else %}
+        <li class="list-group-item text-muted">No health alerts.</li>
+      {% endif %}
+    </ul>
+  </div>
+  
+  <!-- Safety Alerts -->
+  <div class="card mb-4">
+    <div class="card-header bg-warning">🛡️ Safety Alerts</div>
+    <ul class="list-group list-group-flush">
+        {% for alert in safety_alerts %}
+        <li class="list-group-item">
+          <strong>{{ alert.user }}</strong> — {{ alert.issue }}
+          <div><small>{{ alert.details }}</small></div>
+        </li>
+      {% else %}
+        <li class="list-group-item text-muted">No safety alerts.</li>
+      {% endfor %}      
+    </ul>
+  </div>
+
+  <!-- LLM Recommendations -->
+  <div class="card mb-4">
+    <div class="card-header bg-success text-white">🧠 AI Recommendations</div>
+    <div class="card-body">
+      <ol>
+        {% for line in llm_response.split('\n') if line.strip() %}
+          <li>{{ line.strip() }}</li>
+        {% else %}
+          <p class="text-muted">No AI recommendations available.</p>
+        {% endfor %}
+      </ol>
+    </div>
+  </div>
+
+  <!-- Chart Section -->
+  <div class="card mb-4">
+    <div class="card-header bg-secondary text-white">📊 Health Trend (Heart Rate)</div>
+    <div class="card-body">
+      <canvas id="healthChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Embed JSON data safely using Jinja -->
+<script id="chart-data" type="application/json">
+{
+  "labels": {{ heart_rate_labels | tojson | safe }},
+  "values": {{ heart_rate_values | tojson | safe }}
+}
+</script>
+
+<script>
+  const chartDataEl = document.getElementById('chart-data');
+  const chartData = JSON.parse(chartDataEl.textContent);
+
+  const ctx = document.getElementById('healthChart');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: chartData.labels,
+      datasets: [{
+        label: 'Heart Rate',
+        data: chartData.values,
+        borderColor: 'rgba(75,192,192,1)',
+        borderWidth: 2,
+        backgroundColor: 'rgba(75,192,192,0.2)',
+        fill: true,
+        tension: 0.4
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        title: {
+          display: true,
+          text: 'Heart Rate Over Time'
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: false,
+          title: {
+            display: true,
+            text: 'Heart Rate (bpm)'
+          }
+        },
+        x: {
+          title: {
+            display: true,
+            text: 'Timestamp'
+          }
+        }
+      }
+    }
+  });
+</script>
+
+</body>
+</html>
